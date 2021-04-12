@@ -29,7 +29,7 @@ namespace IAS.Adapter.AzureIOTHub
         /// </summary>
         internal new ILogger Logger => base.Logger;
 
-        private readonly Features.SnapshotTagValuePushImp snapshotTagValuePushImp;
+        //private readonly Features.SnapshotTagValuePushImp snapshotTagValuePushImp;
 
         private readonly Features.SnapshotTagValuePushImp_EventProcessor snapshotTagValuePushImp_EventProcessor;
 
@@ -48,18 +48,22 @@ namespace IAS.Adapter.AzureIOTHub
             ILogger<Adapter> logger = null
         ) : base(id, options, backgroundTaskService, logger) 
         {
-            snapshotTagValuePushImp = new Features.SnapshotTagValuePushImp(this);
+            //snapshotTagValuePushImp = new Features.SnapshotTagValuePushImp(this);
+            //AddFeatures(snapshotTagValuePushImp);
+
             snapshotTagValuePushImp_EventProcessor = new Features.SnapshotTagValuePushImp_EventProcessor(this);
+            AddFeatures(snapshotTagValuePushImp_EventProcessor);
 
             // data read
             AddFeatures(new Features.ReadSnapshotTagValuesImp(this));
-            AddFeatures(snapshotTagValuePushImp);
+            
         }
 
         #endregion
 
         #region [ Implementation ]
 
+        /// <inheritdoc/>
         protected override async Task StartAsync(CancellationToken cancellationToken)
         {
             await InitAsync().ConfigureAwait(false);
@@ -67,40 +71,36 @@ namespace IAS.Adapter.AzureIOTHub
             AddProperty("Successfully connected to ", Options.EventHubName);
             AddProperty("Startup Time", DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ"));
 
-            BackgroundTaskService.QueueBackgroundWorkItem(snapshotTagValuePushImp.RunAsync);
+            //BackgroundTaskService.QueueBackgroundWorkItem(snapshotTagValuePushImp.RunAsync);
 
-            if (Options.UseEventProcessor)
+            // assign handlers
+            Options.ProcessingClient.ProcessEventAsync += snapshotTagValuePushImp_EventProcessor.processEventHandler;
+            Options.ProcessingClient.ProcessErrorAsync += snapshotTagValuePushImp_EventProcessor.processErrorHandler;
+            Options.ProcessingClient.PartitionInitializingAsync += snapshotTagValuePushImp_EventProcessor.initializeEventHandler;
+
+            await Options.ProcessingClient
+                .StartProcessingAsync(cancellationToken);
+        }
+
+        /// <inheritdoc/>
+        protected override async Task StopAsync(CancellationToken cancellationToken)
+        {
+            try
             {
-                // assign handlers
-                Options.ProcessingClient.ProcessEventAsync += snapshotTagValuePushImp_EventProcessor.processEventHandler;
-                Options.ProcessingClient.ProcessErrorAsync += snapshotTagValuePushImp_EventProcessor.processErrorHandler;
-                Options.ProcessingClient.PartitionInitializingAsync += snapshotTagValuePushImp_EventProcessor.initializeEventHandler;
-
                 await Options.ProcessingClient
                     .StartProcessingAsync(cancellationToken);
             }
-        }
-
-        protected override async Task StopAsync(CancellationToken cancellationToken)
-        {
-            if (Options.UseEventProcessor)
+            finally
             {
-                try
-                {
-                    await Options.ProcessingClient
-                        .StartProcessingAsync(cancellationToken);
-                }
-                finally
-                {
-                    // To prevent leaks, the handlers should be removed when processing is complete.
-                    Options.ProcessingClient.ProcessEventAsync -= snapshotTagValuePushImp_EventProcessor.processEventHandler;
-                    Options.ProcessingClient.ProcessErrorAsync -= snapshotTagValuePushImp_EventProcessor.processErrorHandler;
+                // To prevent leaks, the handlers should be removed when processing is complete.
+                Options.ProcessingClient.ProcessEventAsync -= snapshotTagValuePushImp_EventProcessor.processEventHandler;
+                Options.ProcessingClient.ProcessErrorAsync -= snapshotTagValuePushImp_EventProcessor.processErrorHandler;
 
-                    Options.ProcessingClient.PartitionInitializingAsync -= snapshotTagValuePushImp_EventProcessor.initializeEventHandler;
-                }
+                Options.ProcessingClient.PartitionInitializingAsync -= snapshotTagValuePushImp_EventProcessor.initializeEventHandler;
             }
         }
 
+        /// <inheritdoc/>
         protected override Task<IEnumerable<HealthCheckResult>> CheckHealthAsync(
             IAdapterCallContext context,
             CancellationToken cancellationToken
@@ -129,12 +129,7 @@ namespace IAS.Adapter.AzureIOTHub
         /// <returns></returns>
         private async Task InitAsync()
         {
-            // general init here
-
-            if (Options.UseEventProcessor)
-                InitEventProcessorClient();
-            else
-                await InitConsumerClient();
+            InitEventProcessorClient();
         }
 
         public async Task InitConsumerClient()
@@ -158,7 +153,7 @@ namespace IAS.Adapter.AzureIOTHub
                 // Information on using the client with a proxy can be found in the README for this quick start, here:
                 // https://github.com/Azure-Samples/azure-iot-samples-csharp/tree/master/iot-hub/Quickstarts/ReadD2cMessages/README.md#websocket-and-proxy-support
                 var consumer = new EventHubConsumerClient(
-                    EventHubConsumerClient.DefaultConsumerGroupName,
+                   Options.ConsumerGroup ?? EventHubConsumerClient.DefaultConsumerGroupName,
                     connectionString,
                     Options.EventHubName);
 
@@ -170,13 +165,24 @@ namespace IAS.Adapter.AzureIOTHub
             }
         }
 
+        /// <summary>
+        /// More info on Azure Event Processor client <seealso cref="https://github.com/Azure/azure-sdk-for-net/tree/master/sdk/eventhub/Azure.Messaging.EventHubs.Processor/samples"/>
+        /// </summary>
         public void InitEventProcessorClient()
         {
             try
             {
-                // settings null checks
+                if (String.IsNullOrEmpty(Options.BlobContainerName))
+                    throw new ArgumentNullException("Storage blob container name value can't be empty");
 
+                if (String.IsNullOrEmpty(Options.StorageConnectionString))
+                    throw new ArgumentNullException("Storage conenction string value can't be empty");
+
+
+                // mor einfo about blob container client connection strings
+                // can be found here https://docs.microsoft.com/en-us/azure/storage/common/storage-configure-connection-string
                 BlobContainerClient storageClient = new BlobContainerClient(Options.StorageConnectionString, Options.BlobContainerName);
+                storageClient.CreateIfNotExists();
 
                 EventProcessorClient processor = new EventProcessorClient
                 (
@@ -188,9 +194,9 @@ namespace IAS.Adapter.AzureIOTHub
 
                 Options.ProcessingClient = processor;
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-
+                Logger.LogError("Failed initialising Event processor component(s).", ex);
                 throw;
             }
         }

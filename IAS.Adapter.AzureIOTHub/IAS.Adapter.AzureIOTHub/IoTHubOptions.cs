@@ -13,17 +13,11 @@ namespace IAS.Adapter.AzureIOTHub
 
         internal const string IotHubSharedAccessKeyName = "service";
 
-        /// <summary>
-        /// Indicates whether to use the adapter with event processor implementation.
-        /// More information on the "EventProcessorClient" and its benefits can be found here:
-        /// https://github.com/Azure/azure-sdk-for-net/blob/master/sdk/eventhub/Azure.Messaging.EventHubs.Processor/README.md
-        /// </summary>
-        public bool UseEventProcessor { get; set; } = false;
-
         #region [ Additional setting if event processor implementation is used ]
 
         /// <summary>
-        /// Name of the event hub consumer group
+        /// Name of the event hub consumer group.
+        /// <seealso cref="https://github.com/MicrosoftDocs/azure-docs/blob/master/includes/iot-hub-get-started-create-consumer-group.md"/>
         /// </summary>
         public string ConsumerGroup { get; set; }
 

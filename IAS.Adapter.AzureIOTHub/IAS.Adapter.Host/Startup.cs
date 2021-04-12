@@ -52,8 +52,12 @@ namespace IAS.Adapter.Host
                     {
                         EventHubCompatibleEndpoint = Configuration["azure-iot-hub:eventHubCompatibleEndpoint"]?.ToString(),
                         EventHubName = Configuration["azure-iot-hub:eventHubName"]?.ToString(),
+                        ConsumerGroup = Configuration["azure-iot-hub:consumerGroup"]?.ToString(),
                         SharedAccessKey = Configuration["azure-iot-hub:sharedAccessKey"]?.ToString(),
-                        EventHubConnectionString = Configuration["azure-iot-hub:eventHubConnectionString"]?.ToString()
+                        EventHubConnectionString = Configuration["azure-iot-hub:eventHubConnectionString"]?.ToString(),
+
+                        BlobContainerName = Configuration["azure-iot-hub:blobContainerName"]?.ToString(),
+                        StorageConnectionString = Configuration["azure-iot-hub:storageConnectionString"]?.ToString()
                     })
                 );
             //.AddAdapter(sp => {

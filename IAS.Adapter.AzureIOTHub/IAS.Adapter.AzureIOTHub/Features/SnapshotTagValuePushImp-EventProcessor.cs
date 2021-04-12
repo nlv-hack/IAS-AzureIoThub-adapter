@@ -51,8 +51,7 @@ namespace IAS.Adapter.AzureIOTHub.Features
         {
             try
             {
-                // Perform the application-specific processing for an event.
-                // await DoSomethingWithTheEvent(eventArgs.Partition, eventArgs.Data);
+                // TODO: general message type parser here
 
                 await _push
                     .ValueReceived(new TagValueQueryResult("tag-id", "tag-name", TagValueBuilder.Create().Build()), _adapter.StopToken);
@@ -60,6 +59,8 @@ namespace IAS.Adapter.AzureIOTHub.Features
             catch (Exception ex)
             {
                 // Handle the exception from handler code
+                _adapter.Logger.LogError(ex, "Encountered and error in process event handler");
+                throw;
             }
         }
 
@@ -90,9 +91,11 @@ namespace IAS.Adapter.AzureIOTHub.Features
                 // await DoSomethingWithTheError(eventArgs.Exception);
                 await Task.CompletedTask;
             }
-            catch
+            catch (Exception ex)
             {
                 // Handle the exception from handler code
+                _adapter.Logger.LogError(ex, "Encountered and error in error event handler");
+                throw;
             }
         }
 
@@ -115,11 +118,13 @@ namespace IAS.Adapter.AzureIOTHub.Features
 
                 args.DefaultStartingPosition = startPositionWhenNoCheckpoint;
             }
-            catch
+            catch (Exception ex)
             {
                 // Take action to handle the exception.
                 // It is important that all exceptions are
                 // handled and none are permitted to bubble up.
+                _adapter.Logger.LogError(ex, "Encountered and error in Event processor init method.");
+                throw;
             }
 
             await Task.CompletedTask;

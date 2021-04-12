@@ -5,7 +5,7 @@ VisualStudioVersion = 16.0.30128.74
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "IAS.Adapter.AzureIOTHub", "IAS.Adapter.AzureIOTHub\IAS.Adapter.AzureIOTHub.csproj", "{902820FC-4777-40D4-A876-68160FB97736}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IAS.Adapter.Host", "IAS.Adapter.Host\IAS.Adapter.Host.csproj", "{80D0A0BB-5F0D-46BD-B547-C94BD814F2FE}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "IAS.Adapter.Host", "IAS.Adapter.Host\IAS.Adapter.Host.csproj", "{80D0A0BB-5F0D-46BD-B547-C94BD814F2FE}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
